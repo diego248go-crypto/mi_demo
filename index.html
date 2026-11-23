@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Predicción del Rendimiento Académico | Álgebra Lineal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para visualización científica -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons UMD Build -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        academic: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#082f49',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        /* Scrollbars personalizados */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Notificación Toast Flotante -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ======================================================================= -->
+    <!-- PANTALLA DE CREACIÓN DE CUENTA / ACCESO ACADÉMICO                        -->
+    <!-- ======================================================================= -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 flex items-center justify-center p-4 overflow-y-auto">
+        <!-- Elementos decorativos de fondo -->
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(2,132,199,0.18),transparent_70%)] pointer-events-none"></div>
+        <div class="absolute -left-20 -top-20 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -right-20 -bottom-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 w-full max-w-md bg-slate-900/90 border border-slate-700/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl space-y-6 my-auto">
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-4 bg-gradient-to-br from-sky-500/30 to-indigo-500/20 border border-sky-400/40 rounded-2xl text-sky-400 shadow-inner shadow-sky-400/20 mb-2">
+                    <i data-lucide="graduation-cap" class="w-10 h-10"></i>
+                </div>
+                <h2 id="auth-titulo" class="text-2xl font-extrabold tracking-tight text-white">Portal de Modelado Académico</h2>
+                <p id="auth-subtitulo" class="text-xs sm:text-sm text-slate-400">Inicie sesión o registre su cuenta para estimar el rendimiento estudiantil mediante Álgebra Lineal.</p>
+            </div>
+
+            <!-- Selector de Modo (Crear Cuenta vs Iniciar Sesión) -->
+            <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+                <button type="button" onclick="cambiarModoAuth('registro')" id="btn-modo-registro" class="py-2.5 rounded-xl text-xs font-bold transition bg-sky-600 text-white shadow-md">
+                    Registrar Cuenta
+                </button>
+                <button type="button" onclick="cambiarModoAuth('login')" id="btn-modo-login" class="py-2.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white">
+                    Iniciar Sesión
+                </button>
+            </div>
+
+            <form onsubmit="procesarAutenticacion(event)" class="space-y-4">
+                <div id="campo-nombre-container" class="space-y-1.5 text-left">
+                    <label class="text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">Nombre del Investigador / Docente</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </span>
+                        <input type="text" id="auth-nombre" placeholder="Ej. Dr. Alejandro Vaca"
+                            class="w-full bg-slate-950/80 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent font-mono">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 text-left">
+                    <label class="text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">Correo Institucional</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                        </span>
+                        <input type="email" id="auth-email" required placeholder="investigador@uab.edu.bo"
+                            class="w-full bg-slate-950/80 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent font-mono">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 text-left">
+                    <label class="text-xs font-mono uppercase tracking-wider text-slate-300 font-semibold">Contraseña de Acceso</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                        </span>
+                        <input type="password" id="auth-password" required placeholder="••••••••"
+                            class="w-full bg-slate-950/80 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent font-mono">
+                    </div>
+                </div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full mt-2 py-3.5 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-600/30 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                    <span id="auth-btn-text">Crear Cuenta y Cargar Sistema</span>
+                </button>
+            </form>
+
+            <div class="pt-4 border-t border-slate-800 text-center">
+                <p class="text-[11px] text-slate-400 font-mono">Optimización Matricial • Regresión Lineal Múltiple</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- APLICACIÓN PRINCIPAL (OCULTA HASTA AUTENTICACIÓN)                      -->
+    <!-- ======================================================================= -->
+    <div id="main-app" class="hidden min-h-screen flex-col">
+
+        <!-- Encabezado / Hero Section Avanzado, Pro y Bonito -->
+        <header class="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 text-white border-b border-slate-800 shadow-2xl sticky top-0 z-40">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(2,132,199,0.15),transparent_60%)] pointer-events-none"></div>
+            <div class="absolute -right-10 -bottom-10 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    
+                    <!-- Identidad del Proyecto -->
+                    <div class="flex items-start gap-4">
+                        <div class="p-3.5 bg-gradient-to-br from-sky-500/30 to-indigo-500/20 border border-sky-400/40 rounded-2xl text-sky-400 shadow-inner shadow-sky-400/20 flex-shrink-0">
+                            <i data-lucide="cpu" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                                <span class="text-xs font-mono uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                                    Predicción Académica Inteligente
+                                </span>
+                                <span id="user-badge-session" class="text-xs font-mono text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded border border-slate-700">Sesión Activa</span>
+                            </div>
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                                Sistema de Predicción del Rendimiento Académico
+                            </h1>
+                            <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                                Modelo predictivo basado en Regresión Lineal Múltiple y Ecuación Normal Matricial.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Ecuación Normal y Botón Salir -->
+                    <div class="flex items-center gap-4 self-start lg:self-auto">
+                        <div class="bg-slate-900/90 border border-slate-700/80 backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-4">
+                            <div class="p-2.5 bg-amber-500/20 border border-amber-400/30 rounded-xl text-amber-400">
+                                <i data-lucide="function-square" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 block font-medium">Ecuación Normal Predictiva</span>
+                                <div class="font-mono text-sm sm:text-base font-bold text-amber-300 tracking-wide mt-0.5">
+                                    β = (X<sup>T</sup>X)<sup>-1</sup> X<sup>T</sup>Y
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="cerrarSesion()" title="Cerrar Sesión" class="p-3.5 bg-slate-900/90 border border-slate-700/80 hover:border-rose-500/50 rounded-2xl text-slate-400 hover:text-rose-400 transition shadow-xl flex items-center justify-center">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Barra de Navegación por Pestañas -->
+            <div class="bg-slate-900/80 border-t border-slate-800/80 backdrop-blur-md">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <nav class="flex space-x-1.5 overflow-x-auto py-2" aria-label="Tabs">
+                        <button onclick="cambiarPestana('prediccion')" id="tab-btn-prediccion" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-sky-600 text-white shadow-lg shadow-sky-600/30">
+                            <i data-lucide="calculator" class="w-4 h-4"></i>
+                            <span>1. Simulador y Predicción</span>
+                        </button>
+                        <button onclick="cambiarPestana('datos')" id="tab-btn-datos" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all whitespace-nowrap">
+                            <i data-lucide="database" class="w-4 h-4"></i>
+                            <span>2. Datos CSV y Estadísticas</span>
+                        </button>
+                        <button onclick="cambiarPestana('algebra')" id="tab-btn-algebra" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all whitespace-nowrap">
+                            <i data-lucide="grid" class="w-4 h-4"></i>
+                            <span>3. Álgebra Lineal: Matrices</span>
+                        </button>
+                        <button onclick="cambiarPestana('graficas')" id="tab-btn-graficas" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all whitespace-nowrap">
+                            <i data-lucide="line-chart" class="w-4 h-4"></i>
+                            <span>4. Gráficas y Evaluación</span>
+                        </button>
+                        <button onclick="cambiarPestana('informe')" id="tab-btn-informe" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all whitespace-nowrap">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            <span>5. Fundamento e Informe Técnico</span>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- Tarjetas de Resumen Rápido del Modelo -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-300 transition">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Muestra Entrenada (n)</p>
+                        <p id="kpi-n" class="text-2xl font-bold text-slate-900 mt-1">0 Estudiantes</p>
+                        <p id="kpi-csv-name" class="text-xs text-slate-500 mt-0.5 truncate max-w-[180px]">dataset_vacio.csv</p>
+                    </div>
+                    <div class="p-3.5 bg-slate-100 rounded-2xl text-slate-700">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-300 transition">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Coeficiente R²</p>
+                            <span class="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Ajuste</span>
+                        </div>
+                        <p id="kpi-r2" class="text-2xl font-bold text-emerald-600 mt-1">0.0000</p>
+                        <p id="kpi-r2-pct" class="text-xs text-slate-500 mt-0.5">Sin datos iniciales</p>
+                    </div>
+                    <div class="p-3.5 bg-emerald-50 rounded-2xl text-emerald-600">
+                        <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-300 transition">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Error Absoluto Medio (MAE)</p>
+                        <p id="kpi-mae" class="text-2xl font-bold text-sky-600 mt-1">0.00 pts</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Desviación promedio</p>
+                    </div>
+                    <div class="p-3.5 bg-sky-50 rounded-2xl text-sky-600">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-300 transition">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Error Cuadrático (RMSE)</p>
+                        <p id="kpi-rmse" class="text-2xl font-bold text-indigo-600 mt-1">0.00 pts</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Raíz del error cuadrático</p>
+                    </div>
+                    <div class="p-3.5 bg-indigo-50 rounded-2xl text-indigo-600">
+                        <i data-lucide="sigma" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Barra de Ecuación del Modelo Entrenado -->
+            <section class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-5 shadow-lg border border-slate-700 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30 flex-shrink-0">
+                        <i data-lucide="function-square" class="w-6 h-6"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold">Ecuación Hiperplana de Regresión Lineal Múltiple Predictiva</h2>
+                        <p id="ecuacion-modelo-top" class="font-mono text-sm sm:text-base font-bold text-amber-300 mt-1 break-all">
+                            Ŷ = β₀ + β₁·X₁ + β₂·X₂ + β₃·X₃ + β₄·X₄ (Cargue datos para entrenar)
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs font-mono">
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">X₁: Horas</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">X₂: Asistencia</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">X₃: Tareas</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">X₄: Previa Mat.</span>
+                </div>
+            </section>
+
+            <!-- ======================================================================= -->
+            <!-- PESTAÑA 1: SIMULADOR Y PREDICCIÓN DE ESTUDIANTE                         -->
+            <!-- ======================================================================= -->
+            <section id="tab-prediccion" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Columna Izquierda: Formulario (7 cols) -->
+                    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 mb-6 gap-3">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <i data-lucide="user-check" class="w-5 h-5 text-sky-600"></i>
+                                    Simulador de Predicción Académica (Ŷ)
+                                </h3>
+                                <p class="text-xs sm:text-sm text-slate-500">Ingrese las variables independientes del estudiante a predecir.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button onclick="cargarPlantillaEjemplo()" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold transition border border-sky-200/60 flex items-center gap-1">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Cargar Datos de Prueba (60)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-5">
+                            <!-- Variable X1 -->
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="input-x1" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                        <span class="px-2 py-0.5 bg-sky-600 text-white rounded-lg font-mono text-xs">X₁</span>
+                                        Horas de estudio por semana
+                                    </label>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" id="input-x1" min="0" max="40" step="0.5" value="10" 
+                                            oninput="sincronizarEntrada('x1', this.value)"
+                                            class="w-20 text-right font-mono font-bold text-sm px-2.5 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none bg-white">
+                                        <span class="text-xs font-medium text-slate-500 w-10">hrs</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="slider-x1" min="0" max="30" step="0.5" value="10"
+                                    oninput="sincronizarSlider('x1', this.value)"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-600">
+                            </div>
+
+                            <!-- Variable X2 -->
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="input-x2" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                        <span class="px-2 py-0.5 bg-emerald-600 text-white rounded-lg font-mono text-xs">X₂</span>
+                                        Porcentaje de asistencia a clases
+                                    </label>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" id="input-x2" min="0" max="100" step="1" value="80"
+                                            oninput="sincronizarEntrada('x2', this.value)"
+                                            class="w-20 text-right font-mono font-bold text-sm px-2.5 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+                                        <span class="text-xs font-medium text-slate-500 w-10">%</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="slider-x2" min="0" max="100" step="1" value="80"
+                                    oninput="sincronizarSlider('x2', this.value)"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                            </div>
+
+                            <!-- Variable X3 -->
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="input-x3" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                        <span class="px-2 py-0.5 bg-amber-600 text-white rounded-lg font-mono text-xs">X₃</span>
+                                        Porcentaje de tareas completadas
+                                    </label>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" id="input-x3" min="0" max="100" step="1" value="80"
+                                            oninput="sincronizarEntrada('x3', this.value)"
+                                            class="w-20 text-right font-mono font-bold text-sm px-2.5 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                                        <span class="text-xs font-medium text-slate-500 w-10">%</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="slider-x3" min="0" max="100" step="1" value="80"
+                                    oninput="sincronizarSlider('x3', this.value)"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
+                            </div>
+
+                            <!-- Variable X4 -->
+                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="input-x4" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                        <span class="px-2 py-0.5 bg-purple-600 text-white rounded-lg font-mono text-xs">X₄</span>
+                                        Calificación previa en Matemáticas
+                                    </label>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" id="input-x4" min="0" max="100" step="1" value="75"
+                                            oninput="sincronizarEntrada('x4', this.value)"
+                                            class="w-20 text-right font-mono font-bold text-sm px-2.5 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white">
+                                        <span class="text-xs font-medium text-slate-500 w-10">pts</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="slider-x4" min="0" max="100" step="1" value="75"
+                                    oninput="sincronizarSlider('x4', this.value)"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                            </div>
+                        </div>
+
+                        <!-- Botón para agregar -->
+                        <div class="mt-6 pt-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                            <span class="text-xs text-slate-500">Cálculo algebraico instantáneo Ŷ = x · β</span>
+                            <button onclick="agregarEstudianteAlDataset()" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-md">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                Incorporar Estudiante al Modelo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Resultado y Desglose (5 cols) -->
+                    <div class="lg:col-span-5 flex flex-col gap-6">
+                        <!-- Tarjeta Principal -->
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Predicción del Modelo (Ŷ)</span>
+                                    <span id="badge-estado" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                        PENDIENTE
+                                    </span>
+                                </div>
+
+                                <div class="my-6 text-center py-6 px-4 rounded-2xl bg-slate-900 text-white relative shadow-inner">
+                                    <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Calificación Final Estimada</p>
+                                    <div class="flex items-baseline justify-center gap-2 mt-2">
+                                        <span id="resultado-y-pred" class="text-5xl sm:text-6xl font-extrabold font-mono tracking-tight text-sky-400">0.00</span>
+                                        <span class="text-xl text-slate-400 font-mono">/ 100</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-3 rounded-full mt-5 overflow-hidden p-0.5">
+                                        <div id="barra-progreso-nota" class="bg-gradient-to-r from-sky-500 to-emerald-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                                    </div>
+                                    <p id="resultado-sin-recorte" class="text-[11px] font-mono text-slate-400 mt-2">
+                                        Entrene el sistema para habilitar coeficientes β
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
+                                        <i data-lucide="list-ordered" class="w-4 h-4 text-sky-600"></i>
+                                        Desglose Vectorial de la Predicción
+                                    </h4>
+                                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 font-mono text-xs space-y-2" id="desglose-prediccion">
+                                        <p class="text-slate-400 text-center py-2">Sin coeficientes calculados aún.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interpretación de Coeficientes -->
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                            <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                                Interpretación de Coeficientes (β)
+                            </h4>
+                            <div id="lista-interpretacion-betas" class="space-y-2.5 text-xs text-slate-600">
+                                <p class="text-slate-400">Cargue un archivo CSV o use datos de prueba.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ======================================================================= -->
+            <!-- PESTAÑA 2: CONJUNTO DE DATOS CSV Y ESTADÍSTICA                          -->
+            <!-- ======================================================================= -->
+            <section id="tab-datos" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="file-spreadsheet" class="w-5 h-5 text-sky-600"></i>
+                                Gestión del Conjunto de Datos de Entrenamiento (CSV)
+                            </h3>
+                            <p class="text-sm text-slate-500 mt-0.5">
+                                Sube tu archivo <code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">.csv</code> (columnas: X1, X2, X3, X4, Y).
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold shadow-sm transition">
+                                <i data-lucide="upload" class="w-4 h-4"></i>
+                                <span>Cargar Archivo CSV</span>
+                                <input type="file" id="file-upload-csv" accept=".csv" class="hidden" onchange="procesarArchivoCSV(event)">
+                            </label>
+                            <button onclick="descargarCSVActual()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                <span>Descargar CSV Actual</span>
+                            </button>
+                            <button onclick="cargarPlantillaEjemplo()" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span>Cargar 60 Ejemplos</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Estadística -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <h4 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-600"></i>
+                        Análisis Estadístico Descriptivo
+                    </h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase text-slate-600">
+                                    <th class="py-3 px-4">Variable</th>
+                                    <th class="py-3 px-4 text-right">Muestra (n)</th>
+                                    <th class="py-3 px-4 text-right">Media</th>
+                                    <th class="py-3 px-4 text-right">Desv. Est. (σ)</th>
+                                    <th class="py-3 px-4 text-right">Mínimo</th>
+                                    <th class="py-3 px-4 text-right">Máximo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-estadisticas-body" class="divide-y divide-slate-200 font-mono text-xs">
+                                <tr><td colspan="6" class="py-4 text-center text-slate-400">No hay datos cargados en el dataset.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla Registros -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <h4 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i data-lucide="table" class="w-5 h-5 text-sky-600"></i>
+                        Registros de Estudiantes y Comparación con Ŷ
+                    </h4>
+                    <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="sticky top-0 bg-slate-100 border-b border-slate-200 text-xs font-bold uppercase text-slate-600 z-10">
+                                <tr>
+                                    <th class="py-3 px-4 text-center">#</th>
+                                    <th class="py-3 px-4 text-right">X₁: Horas</th>
+                                    <th class="py-3 px-4 text-right">X₂: Asistencia</th>
+                                    <th class="py-3 px-4 text-right">X₃: Tareas</th>
+                                    <th class="py-3 px-4 text-right">X₄: Previa Mat.</th>
+                                    <th class="py-3 px-4 text-right bg-sky-50 text-sky-900">Y: Real</th>
+                                    <th class="py-3 px-4 text-right bg-emerald-50 text-emerald-900">Ŷ: Predicha</th>
+                                    <th class="py-3 px-4 text-right">Error |Y - Ŷ|</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-estudiantes-body" class="divide-y divide-slate-100 font-mono text-xs">
+                                <tr><td colspan="8" class="py-6 text-center text-slate-400">Dataset vacío. Suba un archivo CSV o cargue datos de prueba.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================================================================= -->
+            <!-- PESTAÑA 3: ÁLGEBRA LINEAL                                               -->
+            <!-- ======================================================================= -->
+            <section id="tab-algebra" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-5 h-5 text-indigo-600"></i>
+                                Resolución Matricial: Ecuación Normal
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-0.5">
+                                Cálculo exacto de <code class="font-mono font-bold">β = (X<sup>T</sup>X)<sup>-1</sup> X<sup>T</sup>Y</code>
+                            </p>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-200 text-indigo-900 px-4 py-2.5 rounded-xl font-mono text-sm font-bold">
+                            β = (X<sup>T</sup> X)<sup>-1</sup> X<sup>T</sup> Y
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-center">
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <span class="text-xs font-bold text-slate-500 block">1. Matriz X</span>
+                            <span id="dim-x" class="font-mono text-base font-bold text-slate-900 mt-1 block">0 × 5</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <span class="text-xs font-bold text-slate-500 block">2. Matriz X<sup>T</sup></span>
+                            <span id="dim-xt" class="font-mono text-base font-bold text-slate-900 mt-1 block">5 × 0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <span class="text-xs font-bold text-slate-500 block">3. Producto X<sup>T</sup>X</span>
+                            <span class="font-mono text-base font-bold text-sky-700 mt-1 block">5 × 5</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <span class="text-xs font-bold text-slate-500 block">4. Inversa (X<sup>T</sup>X)<sup>-1</sup></span>
+                            <span class="font-mono text-base font-bold text-indigo-700 mt-1 block">5 × 5</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                            <span class="text-xs font-bold text-amber-800 block">5. Coeficientes β</span>
+                            <span class="font-mono text-base font-bold text-amber-900 mt-1 block">5 × 1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matrices X y Y -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-bold text-slate-900">Matriz de Diseño <code class="font-mono text-sky-600">X</code></h4>
+                            <span id="badge-dim-x" class="text-xs font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-semibold">0 × 5</span>
+                        </div>
+                        <div class="overflow-x-auto bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-xs">
+                            <table class="w-full text-right">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700">
+                                        <th class="pb-2 text-left">Fila</th>
+                                        <th class="pb-2">Col 0 (1)</th>
+                                        <th class="pb-2">Col 1 (X₁)</th>
+                                        <th class="pb-2">Col 2 (X₂)</th>
+                                        <th class="pb-2">Col 3 (X₃)</th>
+                                        <th class="pb-2">Col 4 (X₄)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matriz-x-body">
+                                    <tr><td colspan="6" class="py-4 text-center text-slate-500">Sin datos</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-bold text-slate-900">Vector <code class="font-mono text-emerald-600">Y</code></h4>
+                            <span id="badge-dim-y" class="text-xs font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-semibold">0 × 1</span>
+                        </div>
+                        <div class="overflow-x-auto bg-slate-900 text-emerald-300 rounded-xl p-4 font-mono text-xs">
+                            <table class="w-full text-right">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700">
+                                        <th class="pb-2 text-left">Est.</th>
+                                        <th class="pb-2">Y</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vector-y-body">
+                                    <tr><td colspan="2" class="py-4 text-center text-slate-500">Sin datos</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- X^T -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-bold text-slate-900">Matriz Transpuesta <code class="font-mono text-indigo-600">X<sup>T</sup></code></h4>
+                        <span id="badge-dim-xt" class="text-xs font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-semibold">5 × 0</span>
+                    </div>
+                    <div class="overflow-x-auto bg-slate-900 text-slate-200 rounded-xl p-4 font-mono text-xs text-center text-slate-500" id="matriz-xt-container">Sin datos en el dataset</div>
+                </div>
+
+                <!-- XtX y XtX_inv -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <h4 class="text-sm font-bold text-slate-900 mb-3">Producto <code class="font-mono text-sky-600">X<sup>T</sup>X</code> (5 × 5)</h4>
+                        <div class="overflow-x-auto bg-slate-900 text-sky-300 rounded-xl p-4 font-mono text-xs text-center text-slate-500" id="matriz-xtx-container">Pendiente de cálculo</div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <h4 class="text-sm font-bold text-slate-900 mb-3">Matriz Inversa <code class="font-mono text-indigo-600">(X<sup>T</sup>X)<sup>-1</sup></code> (5 × 5)</h4>
+                        <div class="overflow-x-auto bg-slate-900 text-indigo-300 rounded-xl p-4 font-mono text-xs text-center text-slate-500" id="matriz-xtx-inv-container">Pendiente de cálculo</div>
+                    </div>
+                </div>
+
+                <!-- XtY y Beta -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <h4 class="text-sm font-bold text-slate-900 mb-3">Vector <code class="font-mono text-emerald-600">X<sup>T</sup>Y</code> (5 × 1)</h4>
+                        <div class="overflow-x-auto bg-slate-900 text-emerald-300 rounded-xl p-4 font-mono text-xs text-center text-slate-500" id="vector-xty-container">Pendiente de cálculo</div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-amber-300 shadow-sm p-6 bg-gradient-to-br from-white to-amber-50/30">
+                        <h4 class="text-sm font-bold text-slate-900 mb-3">Vector de Coeficientes <code class="font-mono text-amber-600">β</code> (5 × 1)</h4>
+                        <div class="overflow-x-auto bg-slate-900 text-amber-300 rounded-xl p-4 font-mono text-xs text-center text-slate-500" id="vector-beta-container">Pendiente de cálculo</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================================================================= -->
+            <!-- PESTAÑA 4: GRÁFICAS Y EVALUACIÓN                                        -->
+            <!-- ======================================================================= -->
+            <section id="tab-graficas" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <h3 class="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+                            <i data-lucide="scatter-chart" class="w-5 h-5 text-sky-600"></i>
+                            Gráfica 1: Real (Y) vs. Predicho (Ŷ)
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-4">Línea diagonal ideal <code class="font-mono">Y = Ŷ</code></p>
+                        <div class="relative h-80 w-full"><canvas id="chart-real-vs-pred"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <h3 class="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+                            <i data-lucide="bar-chart-horizontal" class="w-5 h-5 text-indigo-600"></i>
+                            Gráfica 2: Impacto de Coeficientes (β₁ a β₄)
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-4">Puntos aportados por unidad de cada variable</p>
+                        <div class="relative h-80 w-full"><canvas id="chart-coeficientes"></canvas></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+                        <i data-lucide="git-commit" class="w-5 h-5 text-emerald-600"></i>
+                        Gráfica 3: Análisis de Residuos (<code class="font-mono">e = Y - Ŷ</code>)
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Distribución del error por estudiante</p>
+                    <div class="relative h-64 w-full"><canvas id="chart-residuos"></canvas></div>
+                </div>
+            </section>
+
+            <!-- ======================================================================= -->
+            <!-- PESTAÑA 5: INFORME TÉCNICO                                              -->
+            <!-- ======================================================================= -->
+            <section id="tab-informe" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                    <div class="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-mono uppercase tracking-wider text-sky-600 font-bold">Documentación</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-1">Informe Técnico: Regresión Lineal Múltiple</h3>
+                        </div>
+                        <button onclick="copiarInformePortapapeles()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition self-start">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                            <span>Copiar Resumen</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700 leading-relaxed">
+                        <div class="space-y-4">
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="font-bold text-slate-900 text-base mb-2">1. Planteamiento del Modelo</h4>
+                                <p>Y = β₀ + β₁X₁ + β₂X₂ + β₃X₃ + β₄X₄ + ε</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="font-bold text-slate-900 text-base mb-2">2. Ecuación Normal</h4>
+                                <p>β = (X<sup>T</sup>X)<sup>-1</sup> X<sup>T</sup>Y</p>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <h4 class="font-bold text-slate-900 text-base mb-2">3. Métricas de Evaluación</h4>
+                                <p>MAE (Error Absoluto Medio), RMSE (Raíz del Error Cuadrático Medio) y R² (Coeficiente de Determinación).</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-sky-50 border border-sky-200">
+                                <h4 class="font-bold text-sky-950 text-base mb-2">4. Reporte del Usuario Actual</h4>
+                                <div id="resumen-ejecutivo-dinamico" class="text-xs font-mono text-sky-900 space-y-1">
+                                    <div>• Sin datos de entrenamiento activos</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-slate-200 mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+                <span>Sistema de Predicción del Rendimiento Académico</span>
+                <span class="font-mono">Álgebra Lineal • β = (XᵀX)⁻¹XᵀY</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Lógica JS -->
+    <script>
+        let datosEstudiantes = [];
+        let nombreArchivoActual = "dataset_vacio.csv";
+        let modeloActual = { beta: [0,0,0,0,0], X:[], Xt:[], XtX:[], XtX_inv:[], XtY:[], Y:[], y_pred:[], residuos:[], mae:0, rmse:0, r2:0 };
+        let chartRealVsPred = null, chartCoeficientes = null, chartResiduos = null;
+        let modoAutenticacion = 'registro'; // 'registro' o 'login'
+
+        function cambiarModoAuth(modo) {
+            modoAutenticacion = modo;
+            const btnReg = document.getElementById('btn-modo-registro');
+            const btnLog = document.getElementById('btn-modo-login');
+            const titulo = document.getElementById('auth-titulo');
+            const subtitulo = document.getElementById('auth-subtitulo');
+            const campoNombre = document.getElementById('campo-nombre-container');
+            const btnText = document.getElementById('auth-btn-text');
+
+            if (modo === 'registro') {
+                btnReg.className = "py-2.5 rounded-xl text-xs font-bold transition bg-sky-600 text-white shadow-md";
+                btnLog.className = "py-2.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white";
+                titulo.textContent = "Portal de Modelado Académico";
+                subtitulo.textContent = "Inicie sesión o registre su cuenta para estimar el rendimiento estudiantil mediante Álgebra Lineal.";
+                campoNombre.style.display = "block";
+                btnText.textContent = "Crear Cuenta y Cargar Sistema";
+            } else {
+                btnLog.className = "py-2.5 rounded-xl text-xs font-bold transition bg-sky-600 text-white shadow-md";
+                btnReg.className = "py-2.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white";
+                titulo.textContent = "Acceso al Sistema Predictivo";
+                subtitulo.textContent = "Ingrese sus credenciales institucionales registradas en el sistema.";
+                campoNombre.style.display = "none";
+                btnText.textContent = "Acceder al Panel";
+            }
+        }
+
+        function procesarAutenticacion(e) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const nombre = document.getElementById('auth-nombre').value || email.split('@')[0];
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('flex');
+            document.getElementById('user-badge-session').textContent = `Usuario: ${nombre}`;
+
+            if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+            
+            if (modoAutenticacion === 'registro') {
+                mostrarNotif(`¡Cuenta creada con éxito para ${nombre}!`);
+            } else {
+                mostrarNotif(`¡Bienvenido de nuevo, ${nombre}!`);
+            }
+
+            // Iniciar con dataset vacío
+            actualizarInterfazCompleta();
+        }
+
+        function cerrarSesion() {
+            document.getElementById('main-app').classList.remove('flex');
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('auth-password').value = '';
+            mostrarNotif("Sesión cerrada correctamente.");
+        }
+
+        function generarDatasetEjemplo60() {
+            let seed = 42;
+            function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+            const datos = [];
+            for (let i = 0; i < 60; i++) {
+                const x1 = Number((2 + rand() * 18).toFixed(1));
+                const x2 = Number((60 + rand() * 40).toFixed(1));
+                const x3 = Number((50 + rand() * 50).toFixed(1));
+                const x4 = Number((45 + rand() * 53).toFixed(1));
+                let y = 4.5 + (1.15 * x1) + (0.22 * x2) + (0.25 * x3) + (0.35 * x4) + (rand() * 4 - 2);
+                y = Math.max(0, Math.min(100, Number(y.toFixed(1))));
+                datos.push({ x1, x2, x3, x4, y });
+            }
+            return datos;
+        }
+
+        function cargarPlantillaEjemplo() {
+            datosEstudiantes = generarDatasetEjemplo60();
+            nombreArchivoActual = "datos_prueba_60.csv";
+            entrenarModeloRegresion();
+            mostrarNotif("¡60 registros de prueba cargados y modelo entrenado!");
+        }
+
+        function matrizTranspuesta(A) {
+            const f = A.length, c = A[0].length, T = Array.from({length: c}, () => Array(f).fill(0));
+            for (let i=0; i<f; i++) for (let j=0; j<c; j++) T[j][i] = A[i][j];
+            return T;
+        }
+
+        function multiplicarMatrices(A, B) {
+            const m = A.length, n = A[0].length, p = B[0].length, C = Array.from({length: m}, () => Array(p).fill(0));
+            for (let i=0; i<m; i++) for (let k=0; k<n; k++) { const aik = A[i][k]; for (let j=0; j<p; j++) C[i][j] += aik * B[k][j]; }
+            return C;
+        }
+
+        function invertirMatriz(A) {
+            const n = A.length, aug = A.map((row, i) => [...row, ...Array.from({length: n}, (_, j) => i === j ? 1 : 0)]);
+            for (let i=0; i<n; i++) {
+                let maxRow = i;
+                for (let k=i+1; k<n; k++) if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+                if (maxRow !== i) [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
+                const piv = aug[i][i];
+                if (Math.abs(piv) < 1e-12) throw new Error("Matriz singular.");
+                for (let j=0; j<2*n; j++) aug[i][j] /= piv;
+                for (let k=0; k<n; k++) if (k !== i) { const f = aug[k][i]; for (let j=0; j<2*n; j++) aug[k][j] -= f * aug[i][j]; }
+            }
+            return aug.map(row => row.slice(n));
+        }
+
+        function entrenarModeloRegresion() {
+            const n = datosEstudiantes.length;
+            if (n === 0) {
+                modeloActual = { beta: [0,0,0,0,0], X:[], Xt:[], XtX:[], XtX_inv:[], XtY:[], Y:[], y_pred:[], residuos:[], mae:0, rmse:0, r2:0 };
+                actualizarInterfazCompleta();
+                return;
+            }
+
+            const X = datosEstudiantes.map(d => [1, d.x1, d.x2, d.x3, d.x4]);
+            const Y = datosEstudiantes.map(d => [d.y]);
+            const Xt = matrizTranspuesta(X);
+            const XtX = multiplicarMatrices(Xt, X);
+            const XtX_inv = invertirMatriz(XtX);
+            const XtY = multiplicarMatrices(Xt, Y);
+            const beta = multiplicarMatrices(XtX_inv, XtY).map(f => f[0]);
+
+            const y_pred = [], residuos = [];
+            let sumAbs = 0, sumCuad = 0, sumY = 0;
+            for (let i=0; i<n; i++) {
+                const yi = datosEstudiantes[i].y;
+                const yHat = beta[0] + beta[1]*X[i][1] + beta[2]*X[i][2] + beta[3]*X[i][3] + beta[4]*X[i][4];
+                const res = yi - yHat;
+                y_pred.push(yHat); residuos.push(res);
+                sumAbs += Math.abs(res); sumCuad += res * res; sumY += yi;
+            }
+            const mediaY = sumY / n;
+            let ssTot = datosEstudiantes.reduce((acc, d) => acc + Math.pow(d.y - mediaY, 2), 0);
+
+            modeloActual = { beta, X, Xt, XtX, XtX_inv, XtY, Y, y_pred, residuos, mae: sumAbs/n, rmse: Math.sqrt(sumCuad/n), r2: ssTot > 0 ? 1 - (sumCuad/ssTot) : 1 };
+            actualizarInterfazCompleta();
+        }
+
+        function actualizarInterfazCompleta() {
+            const b = modeloActual.beta, n = datosEstudiantes.length;
+            document.getElementById('kpi-n').textContent = `${n} Estudiantes`;
+            document.getElementById('kpi-csv-name').textContent = nombreArchivoActual;
+            document.getElementById('kpi-r2').textContent = modeloActual.r2.toFixed(4);
+            document.getElementById('kpi-r2-pct').textContent = n > 0 ? `${(modeloActual.r2 * 100).toFixed(2)}% de varianza explicada` : "Sin datos";
+            document.getElementById('kpi-mae').textContent = `${modeloActual.mae.toFixed(2)} pts`;
+            document.getElementById('kpi-rmse').textContent = `${modeloActual.rmse.toFixed(2)} pts`;
+
+            if (n === 0) {
+                document.getElementById('ecuacion-modelo-top').textContent = "Ŷ = β₀ + β₁·X₁ + β₂·X₂ + β₃·X₃ + β₄·X₄ (Cargue datos para entrenar)";
+                document.getElementById('lista-interpretacion-betas').innerHTML = `<p class="text-slate-400">Cargue un archivo CSV o use datos de prueba.</p>`;
+            } else {
+                const signo = val => val >= 0 ? `+ ${val.toFixed(4)}` : `- ${Math.abs(val).toFixed(4)}`;
+                document.getElementById('ecuacion-modelo-top').innerHTML = `Ŷ = ${b[0].toFixed(4)} ${signo(b[1])}·X₁ ${signo(b[2])}·X₂ ${signo(b[3])}·X₃ ${signo(b[4])}·X₄`;
+
+                const items = [
+                    { s: 'β₀ (Intercepto)', v: b[0], c: 'bg-slate-200 text-slate-800', d: `Constante base (${b[0].toFixed(3)} pts).` },
+                    { s: 'β₁ (Horas)', v: b[1], c: 'bg-sky-100 text-sky-800', d: `Por hora extra: ${b[1]>=0?'+':''}${b[1].toFixed(3)} pts.` },
+                    { s: 'β₂ (Asistencia)', v: b[2], c: 'bg-emerald-100 text-emerald-800', d: `Por % asistencia: ${b[2]>=0?'+':''}${b[2].toFixed(3)} pts.` },
+                    { s: 'β₃ (Tareas)', v: b[3], c: 'bg-amber-100 text-amber-800', d: `Por % tareas: ${b[3]>=0?'+':''}${b[3].toFixed(3)} pts.` },
+                    { s: 'β₄ (Mat. Previa)', v: b[4], c: 'bg-purple-100 text-purple-800', d: `Por nota previa: ${b[4]>=0?'+':''}${b[4].toFixed(3)} pts.` }
+                ];
+                document.getElementById('lista-interpretacion-betas').innerHTML = items.map(i => `
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                        <span class="px-2 py-1 rounded font-mono font-bold text-[11px] ${i.c}">${i.s}: ${i.v.toFixed(4)}</span>
+                        <p class="text-xs text-slate-600">${i.d}</p>
+                    </div>
+                `).join('');
+            }
+
+            calcularPrediccionEstudiante();
+            renderizarEstadisticasYTabla();
+            renderizarSeccionMatrices();
+            actualizarGraficasChartJS();
+
+            document.getElementById('resumen-ejecutivo-dinamico').innerHTML = n > 0 ? `
+                <div>• Muestra: ${n} registros</div>
+                <div>• MAE: ${modeloActual.mae.toFixed(4)} | RMSE: ${modeloActual.rmse.toFixed(4)}</div>
+                <div>• R²: ${modeloActual.r2.toFixed(4)} (${(modeloActual.r2*100).toFixed(2)}%)</div>
+            ` : `<div>• Sin datos de entrenamiento activos</div>`;
+        }
+
+        function sincronizarSlider(c, v) { document.getElementById(`input-${c}`).value = v; calcularPrediccionEstudiante(); }
+        function sincronizarEntrada(c, v) { const n = parseFloat(v); if(!isNaN(n)) { document.getElementById(`slider-${c}`).value = n; calcularPrediccionEstudiante(); } }
+
+        function calcularPrediccionEstudiante() {
+            const x1 = parseFloat(document.getElementById('input-x1').value)||0;
+            const x2 = parseFloat(document.getElementById('input-x2').value)||0;
+            const x3 = parseFloat(document.getElementById('input-x3').value)||0;
+            const x4 = parseFloat(document.getElementById('input-x4').value)||0;
+            const b = modeloActual.beta;
+            
+            if(datosEstudiantes.length === 0) {
+                document.getElementById('resultado-y-pred').textContent = "0.00";
+                document.getElementById('resultado-sin-recorte').textContent = "Entrene el modelo primero";
+                document.getElementById('barra-progreso-nota').style.width = "0%";
+                document.getElementById('desglose-prediccion').innerHTML = `<p class="text-slate-400 text-center py-2">Dataset vacío. Cargue datos para habilitar.</p>`;
+                return;
+            }
+
+            const yEx = b[0] + b[1]*x1 + b[2]*x2 + b[3]*x3 + b[4]*x4;
+            const yAc = Math.max(0, Math.min(100, yEx));
+
+            document.getElementById('resultado-y-pred').textContent = yAc.toFixed(2);
+            document.getElementById('resultado-sin-recorte').textContent = `Exacto: ${yEx.toFixed(4)} pts`;
+            document.getElementById('barra-progreso-nota').style.width = `${yAc}%`;
+
+            const badge = document.getElementById('badge-estado');
+            if(yAc >= 80) { badge.textContent = "EXCELENCIA"; badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800"; }
+            else if(yAc >= 51) { badge.textContent = "APROBADO"; badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800"; }
+            else { badge.textContent = "EN RIESGO"; badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800"; }
+
+            const fmt = n => (n >= 0 ? `+${n.toFixed(3)}` : n.toFixed(3));
+            document.getElementById('desglose-prediccion').innerHTML = `
+                <div class="flex justify-between text-slate-600"><span>Intercepto (β₀)</span><span class="font-bold text-slate-900">${fmt(b[0])}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Horas (${x1} × ${b[1].toFixed(3)})</span><span class="font-bold text-sky-700">${fmt(b[1]*x1)}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Asistencia (${x2} × ${b[2].toFixed(3)})</span><span class="font-bold text-emerald-700">${fmt(b[2]*x2)}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Tareas (${x3} × ${b[3].toFixed(3)})</span><span class="font-bold text-amber-700">${fmt(b[3]*x3)}</span></div>
+                <div class="flex justify-between text-slate-600"><span>Previa (${x4} × ${b[4].toFixed(3)})</span><span class="font-bold text-purple-700">${fmt(b[4]*x4)}</span></div>
+                <div class="border-t border-slate-300 pt-2 flex justify-between font-bold text-slate-900 text-sm"><span>Total Ŷ</span><span class="text-sky-700">${yAc.toFixed(2)}</span></div>
+            `;
+        }
+
+        function agregarEstudianteAlDataset() {
+            if(datosEstudiantes.length === 0) {
+                alert("Primero cargue un dataset inicial (o use el botón de 60 ejemplos) para calcular los coeficientes β.");
+                return;
+            }
+            const x1 = parseFloat(document.getElementById('input-x1').value)||0;
+            const x2 = parseFloat(document.getElementById('input-x2').value)||0;
+            const x3 = parseFloat(document.getElementById('input-x3').value)||0;
+            const x4 = parseFloat(document.getElementById('input-x4').value)||0;
+            const b = modeloActual.beta;
+            const yEst = Math.max(0, Math.min(100, Number((b[0]+b[1]*x1+b[2]*x2+b[3]*x3+b[4]*x4).toFixed(1))));
+            datosEstudiantes.push({x1, x2, x3, x4, y: yEst});
+            entrenarModeloRegresion();
+            mostrarNotif("Estudiante incorporado y modelo reentrenado.");
+        }
+
+        function renderizarEstadisticasYTabla() {
+            const defs = [
+                {k:'x1', n:'X₁: Horas Estudio'}, {k:'x2', n:'X₂: Asistencia %'},
+                {k:'x3', n:'X₃: Tareas %'}, {k:'x4', n:'X₄: Nota Previa'}, {k:'y', n:'Y: Nota Final'}
+            ];
+            
+            if(datosEstudiantes.length === 0) {
+                document.getElementById('tabla-estadisticas-body').innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-400">No hay datos cargados en el dataset.</td></tr>`;
+                document.getElementById('tabla-estudiantes-body').innerHTML = `<tr><td colspan="8" class="py-6 text-center text-slate-400">Dataset vacío. Suba un archivo CSV o cargue datos de prueba.</td></tr>`;
+                return;
+            }
+
+            document.getElementById('tabla-estadisticas-body').innerHTML = defs.map(d => {
+                const vals = datosEstudiantes.map(item => item[d.k]);
+                const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+                const std = Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(vals.length-1 || 1));
+                return `<tr><td class="py-2.5 px-4 font-semibold">${d.n}</td><td class="py-2.5 px-4 text-right">${vals.length}</td><td class="py-2.5 px-4 text-right font-bold text-sky-700">${mean.toFixed(2)}</td><td class="py-2.5 px-4 text-right">${std.toFixed(2)}</td><td class="py-2.5 px-4 text-right">${Math.min(...vals).toFixed(2)}</td><td class="py-2.5 px-4 text-right">${Math.max(...vals).toFixed(2)}</td></tr>`;
+            }).join('');
+
+            document.getElementById('tabla-estudiantes-body').innerHTML = datosEstudiantes.map((d, i) => {
+                const yH = modeloActual.y_pred[i];
+                return `<tr><td class="py-2 px-4 text-center text-slate-400">${i+1}</td><td class="py-2 px-4 text-right">${d.x1}</td><td class="py-2 px-4 text-right">${d.x2}%</td><td class="py-2 px-4 text-right">${d.x3}%</td><td class="py-2 px-4 text-right">${d.x4}</td><td class="py-2 px-4 text-right font-bold bg-sky-50 text-sky-900">${d.y}</td><td class="py-2 px-4 text-right font-bold bg-emerald-50 text-emerald-900">${yH.toFixed(2)}</td><td class="py-2 px-4 text-right text-slate-500">${Math.abs(d.y - yH).toFixed(2)}</td></tr>`;
+            }).join('');
+        }
+
+        function renderizarSeccionMatrices() {
+            const n = datosEstudiantes.length, m = Math.min(10, n);
+            document.getElementById('dim-x').textContent = `${n} × 5`;
+            document.getElementById('dim-xt').textContent = `5 × ${n}`;
+            document.getElementById('badge-dim-x').textContent = `${n} × 5`;
+            document.getElementById('badge-dim-y').textContent = `${n} × 1`;
+            document.getElementById('badge-dim-xt').textContent = `5 × ${n}`;
+
+            if(n === 0) {
+                document.getElementById('matriz-x-body').innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500">Sin datos</td></tr>`;
+                document.getElementById('vector-y-body').innerHTML = `<tr><td colspan="2" class="py-4 text-center text-slate-500">Sin datos</td></tr>`;
+                document.getElementById('matriz-xt-container').innerHTML = "Sin datos en el dataset";
+                document.getElementById('matriz-xtx-container').innerHTML = "Pendiente de cálculo";
+                document.getElementById('matriz-xtx-inv-container').innerHTML = "Pendiente de cálculo";
+                document.getElementById('vector-xty-container').innerHTML = "Pendiente de cálculo";
+                document.getElementById('vector-beta-container').innerHTML = "Pendiente de cálculo";
+                return;
+            }
+
+            document.getElementById('matriz-x-body').innerHTML = modeloActual.X.slice(0, m).map((row, i) => `<tr><td class="py-1.5 text-left text-slate-500">E${i+1}</td><td class="py-1.5 text-amber-400 font-bold">${row[0]}</td><td class="py-1.5">${row[1]}</td><td class="py-1.5">${row[2]}</td><td class="py-1.5">${row[3]}</td><td class="py-1.5">${row[4]}</td></tr>`).join('');
+            document.getElementById('vector-y-body').innerHTML = modeloActual.Y.slice(0, m).map((val, i) => `<tr><td class="py-1.5 text-left text-slate-500">E${i+1}</td><td class="py-1.5 font-bold">${val[0]}</td></tr>`).join('');
+
+            const et5 = ['β₀ (1)', 'X₁', 'X₂', 'X₃', 'X₄'];
+            document.getElementById('matriz-xt-container').innerHTML = `<div class="text-xs text-slate-400 mb-2">Mostrando dimensiones (5 × ${n})</div>`;
+            document.getElementById('matriz-xtx-container').innerHTML = `<table class="w-full text-right"><thead><tr class="text-slate-400 border-b border-slate-700"><th class="pb-2 text-left">Fila</th>` + et5.map(e=>`<th class="pb-2">${e}</th>`).join('') + `</tr></thead><tbody>` + modeloActual.XtX.map((row, i)=>`<tr><td class="text-left text-slate-400">${et5[i]}</td>` + row.map(v=>`<td class="py-1.5">${v.toFixed(1)}</td>`).join('') + `</tr>`).join('') + `</tbody></table>`;
+            document.getElementById('matriz-xtx-inv-container').innerHTML = `<table class="w-full text-right"><thead><tr class="text-slate-400 border-b border-slate-700"><th class="pb-2 text-left">Fila</th>` + et5.map(e=>`<th class="pb-2">${e}</th>`).join('') + `</tr></thead><tbody>` + modeloActual.XtX_inv.map((row, i)=>`<tr><td class="text-left text-slate-400">${et5[i]}</td>` + row.map(v=>`<td class="py-1.5">${v.toExponential(2)}</td>`).join('') + `</tr>`).join('') + `</tbody></table>`;
+            document.getElementById('vector-xty-container').innerHTML = `<table class="w-full text-right"><thead><tr class="text-slate-400 border-b border-slate-700"><th class="pb-2 text-left">Comp.</th><th class="pb-2">Valor</th></tr></thead><tbody>` + modeloActual.XtY.map((v, i)=>`<tr><td class="text-left text-slate-400">${et5[i]}</td><td class="py-1.5 font-bold">${v[0].toFixed(2)}</td></tr>`).join('') + `</tbody></table>`;
+            document.getElementById('vector-beta-container').innerHTML = `<table class="w-full text-right"><thead><tr class="text-slate-400 border-b border-slate-700"><th class="pb-2 text-left">Parámetro</th><th class="pb-2">β</th></tr></thead><tbody>` + modeloActual.beta.map((v, i)=>`<tr><td class="text-left text-slate-200">${et5[i]}</td><td class="py-1.5 font-bold text-amber-400">${v.toFixed(6)}</td></tr>`).join('') + `</tbody></table>`;
+        }
+
+        function actualizarGraficasChartJS() {
+            if (chartRealVsPred) chartRealVsPred.destroy();
+            if (chartCoeficientes) chartCoeficientes.destroy();
+            if (chartResiduos) chartResiduos.destroy();
+
+            if (datosEstudiantes.length === 0) return;
+
+            const pts = datosEstudiantes.map((d, i) => ({ x: d.y, y: Number(modeloActual.y_pred[i].toFixed(2)) }));
+            const minV = Math.min(...datosEstudiantes.map(d=>d.y)), maxV = Math.max(...datosEstudiantes.map(d=>d.y));
+
+            chartRealVsPred = new Chart(document.getElementById('chart-real-vs-pred').getContext('2d'), {
+                type: 'scatter',
+                data: { datasets: [{ label: 'Estudiantes', data: pts, backgroundColor: '#0284c7', pointRadius: 5 }, { type: 'line', label: 'Ideal Y = Ŷ', data: [{x:minV, y:minV}, {x:maxV, y:maxV}], borderColor: '#e11d48', borderWidth: 2, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            chartCoeficientes = new Chart(document.getElementById('chart-coeficientes').getContext('2d'), {
+                type: 'bar',
+                data: { labels: ['β₁: Horas', 'β₂: Asistencia', 'β₃: Tareas', 'β₄: Previa'], datasets: [{ data: modeloActual.beta.slice(1), backgroundColor: ['#0284c7', '#059669', '#d97706', '#7c3aed'], borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            chartResiduos = new Chart(document.getElementById('chart-residuos').getContext('2d'), {
+                type: 'bar',
+                data: { labels: datosEstudiantes.map((_, i) => `E${i+1}`), datasets: [{ data: modeloActual.residuos.map(r => Number(r.toFixed(2))), backgroundColor: modeloActual.residuos.map(r => r >= 0 ? '#10b981' : '#f43f5e'), borderRadius: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function cambiarPestana(id) {
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`tab-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all whitespace-nowrap");
+            document.getElementById(`tab-btn-${id}`).className = "tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap bg-sky-600 text-white shadow-lg shadow-sky-600/30";
+            if(id === 'graficas') actualizarGraficasChartJS();
+        }
+
+        function procesarArchivoCSV(e) {
+            const f = e.target.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = function(evt) {
+                const lines = evt.target.result.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                const nd = [];
+                for(let l of lines) {
+                    const p = l.split(/[;,]/).map(Number);
+                    if(p.length >= 5 && !p.slice(-5).some(isNaN)) {
+                        const s = p.slice(-5);
+                        nd.push({ x1: s[0], x2: s[1], x3: s[2], x4: s[3], y: s[4] });
+                    }
+                }
+                if(nd.length >= 5) { datosEstudiantes = nd; nombreArchivoActual = f.name; entrenarModeloRegresion(); mostrarNotif("CSV cargado con éxito."); }
+                else alert("CSV inválido (se requieren al menos 5 filas numéricas con X1, X2, X3, X4, Y).");
+            };
+            r.readAsText(f);
+        }
+
+        function descargarCSVActual() {
+            if (datosEstudiantes.length === 0) {
+                alert("No hay datos en el dataset para descargar.");
+                return;
+            }
+            const csv = "X1,X2,X3,X4,Y\n" + datosEstudiantes.map(d => `${d.x1},${d.x2},${d.x3},${d.x4},${d.y}`).join("\n");
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = nombreArchivoActual; a.click();
+            URL.revokeObjectURL(url);
+            mostrarNotif("Dataset CSV descargado.");
+        }
+
+        function copiarInformePortapapeles() {
+            navigator.clipboard.writeText(`INFORME TÉCNICO DE PREDICCIÓN\nMAE: ${modeloActual.mae.toFixed(4)}\nRMSE: ${modeloActual.rmse.toFixed(4)}\nR²: ${modeloActual.r2.toFixed(4)}`);
+            mostrarNotif("Informe copiado al portapapeles.");
+        }
+
+        function mostrarNotif(msg) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = "pointer-events-auto px-4 py-3 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-xl border border-slate-700 transition-all";
+            t.textContent = msg; c.appendChild(t);
+            setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 300); }, 3000);
+        }
+
+        window.onload = function() { 
+            if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+        };
+    </script>
+</body>
+</html>
